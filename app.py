@@ -4,7 +4,9 @@ from flask_jwt_extended import JWTManager, jwt_required, create_access_token, cr
 from flask_cors import CORS, cross_origin
 import json
 import os
-import bcrypt
+from flask_bcrypt import Bcrypt
+from dotenv import load_dotenv
+load_dotenv()
 
 PORT = "5000"
 app = Flask(__name__)
@@ -16,6 +18,9 @@ jwt = JWTManager(app)
 # CORS
 CORS(app, resources={r"/*": {"origins": "*", "supports_credentials": True}})
 
+# bcrypt
+bcrypt = Bcrypt(app)
+
 # MongoDB
 connectionString = "mongodb+srv://bruno:" + str(os.environ.get("GOODPODS_MONGO_PASSWORD")) + "@cluster0.g2mr3.mongodb.net/goodpods?retryWrites=true&w=majority"
 app.config["MONGO_URI"] = connectionString
@@ -24,14 +29,15 @@ db = mongo.db
 
 @app.route("/signup", methods=["POST"])
 def signup(): 
-    username = request.json("username")
-    password = request.json("password")
+    print("in signup")
+    username = request.json["username"]
+    password = request.json["password"]
 
     same_username_users = db.users.find( {"username": username } ) 
     if any(True for _ in same_username_users):
         return jsonify({ "status": "error", "messsage": "username taken" }), 409
 
-    pw_hash = bcrypt.hashpw(password, bycrypt.gensalt())
+    pw_hash = bcrypt.generate_password_hash(password)
     mongo_id = db.users.insert_one({ "username": username, "password_hash": pw_hash }).inserted_id
 
     access_token = create_access_token(identity=username, expires_delta=False)
@@ -39,13 +45,14 @@ def signup():
 
 @app.route("/login", methods=["POST"])
 def login(): 
-    username = request.json("username")
-    password = request.json("password")
+    username = request.json["username"]
+    password = request.json["password"]
 
     mongo_user = mongo.db.users.find_one({"username": username})
     pw_hash = mongo_user["password"]
 
-    if bcrypt.checkpw(password, hashed):
+    if bcrypt.check_password_hash(pw_hash, password):
+
         access_token = create_access_token(identity=username, expires_delta=False)
         return jsonify({"status": "success", 'access_token': access_token, 'mongo_id': mongo_user["_id"] }), 200
     else: 
@@ -54,7 +61,7 @@ def login():
 @app.route("/saveToLibrary", methods=['POST'])
 @jwt_required
 def saveToLibrary(): 
-    mongo_id = request.json("mongo_id")
+    mongo_id = request.json["mongo_id"]
     # generate uuid
     # save file
     # generate transcript
@@ -72,11 +79,11 @@ def saveToLibrary():
 @app.route("/createPost", methods=["POST"])
 @jwt_required
 def createPost(): 
-    mongo_id = request.json("mongo_id")
-    title = request.json("title")
-    caption = request.json("caption")
-    audioFile = request.json("audioFile")
-    clip_id = request.json("clip_id")
+    mongo_id = request.json["mongo_id"]
+    title = request.json["title"]
+    caption = request.json["caption"]
+    audioFile = request.json["audioFile"]
+    clip_id = request.json["clip_id"]
 
     mongo_user = mongo.db.users.find_one({"_id": ObjectId(mongo_id)})
     username = mongo_user["username"]
