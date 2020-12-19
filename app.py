@@ -6,6 +6,8 @@ from flask_cors import CORS, cross_origin
 import json
 import os
 import bcrypt
+from dotenv import load_dotenv
+load_dotenv()
 
 PORT = "5000"
 app = Flask(__name__)
@@ -23,10 +25,11 @@ app.config["MONGO_URI"] = connectionString
 mongo = PyMongo(app)
 db = mongo.db
 
-@app.route("/signup", methods=("POST",))
+@app.route("/signup", methods=["POST"])
 def signup(): 
-    username = request.get("username")
-    password = request.get("password")
+    print("in signup")
+    username = request.json["username"]
+    password = request.json["password"]
 
     same_username_users = db.users.find( {"username": username } ) 
     if any(True for _ in same_username_users):
@@ -41,10 +44,10 @@ def signup():
     access_token = create_access_token(identity=username, expires_delta=False)
     return jsonify({"status": "success", 'access_token': access_token, 'mongo_id': mongo_id })
 
-@app.route("/login", methods=("POST",))
+@app.route("/login", methods=["POST"])
 def login(): 
-    username = request.get("username")
-    password = request.get("password")
+    username = request.json["username"]
+    password = request.json["password"]
 
     mongo_user = mongo.db.users.find_one({"username": username})
     pw_hash = mongo_user["password"]
@@ -55,7 +58,7 @@ def login():
     else: 
         return jsonify({"status": "error", "message": "incorrect username or password"})
 
-@app.route("/createPost", methods=("POST",))
+@app.route("/createPost", methods=["POST"])
 @jwt_required
 def createPost(): 
     title = request.get("title")
