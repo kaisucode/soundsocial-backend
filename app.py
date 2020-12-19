@@ -34,8 +34,7 @@ jwt = JWTManager(app)
 
 origin = "http://localhost:3000"
 
-app.config['CORS_HEADERS'] = 'Content-Type'
-CORS(app, resources={r"/*": {"origins": origin, "supports_credentials": True}})
+CORS(app, resources={r"*": {"origins": origin, "supports_credentials": True}})
 
 # bcrypt
 bcrypt = Bcrypt(app)
@@ -64,8 +63,8 @@ def signup():
 
     access_token = create_access_token(identity=username, expires_delta=False)
 
-    return_json = {"status": "success", 'access_token': access_token, 'mongo_id': json.dumps(mongo_id, default=str) }
-    return return_json, 200
+    return_json = {"status": "success", 'access_token': access_token, 'mongo_id': mongo_id}
+    return json.dumps(return_json, default=str), 200
 
 @app.route("/login", methods=["POST"])
 def login(): 
@@ -78,8 +77,9 @@ def login():
     if bcrypt.check_password_hash(pw_hash, password):
 
         access_token = create_access_token(identity=username, expires_delta=False)
-        return_json = {"status": "success", 'access_token': access_token, 'mongo_id': json.dumps(mongo_user["_id"], default=str)}
-        return return_json, 200
+        print(json.dumps(mongo_user["_id"], default=str))
+        return_json = {"status": "success", 'access_token': access_token, 'mongo_id': mongo_user["_id"]}
+        return json.dumps(return_json, default=str), 200
     else: 
         return jsonify({"status": "error", "message": "incorrect username or password"}), 401
 
@@ -122,8 +122,10 @@ def saveToLibrary():
     return {}, 200
 
 @app.route("/getClips", methods=['POST'])
+@cross_origin()
 def get_clip_names():
-    user = mongo.db.users.find_one({"_id": ObjectId(request.json["mongo_id"])})
+    mongo_id = request.json["mongo_id"]
+    user = mongo.db.users.find_one({"_id": ObjectId(mongo_id)})
     clip_names = []
     for clip in user["clips"]:
         clip_object = mongo.db.clips.find_one({"_id": clip}) 
