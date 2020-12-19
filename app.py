@@ -6,10 +6,25 @@ import json
 import os
 from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
+from google.cloud import storage
+from werkzeug.utils import secure_filename
+
+from gsutils import download_blob, generate_wav, upload_blob
+import uuid
+
+UPLOAD_FOLDER = './WavefileUploads'
+ALLOWED_EXTENSIONS = {'mp4'}
+
+
+#download_blob("goodpodswaveforms", "sampleAudio.m4a", "./audioFromGS.mp4")
+
 load_dotenv()
 
 PORT = "5000"
 app = Flask(__name__)
+
+#gcp client
+storage_client = storage.Client()
 
 # JWT Manager
 app.config['SECRET_KEY'] = os.environ.get("GOODPODS_SECRET_KEY")
@@ -63,23 +78,46 @@ def login():
     else: 
         return jsonify({"status": "error", "message": "incorrect username or password"}), 401
 
+
+###
+# 1) downloaded the uploaded wav file
+# 2) creates the wav image
+# 3) saves both the wav file and image to the users library
 @app.route("/saveToLibrary", methods=['POST'])
-@jwt_required
 def saveToLibrary(): 
     mongo_id = request.json["mongo_id"]
-    # generate uuid
-    # save file
-    # generate transcript
-    # generate soundwave
-    ret = {
-            "clip_id": clip_id, 
-            "mongo_id": mongo_id, 
-            "transcript": transcript, 
-            "waveform": waveform
-            }
+    title = request.json["title"]
+    url = request.json["url"]
+    
+    print(request.files)
+    if 'file' in request.files:
+        file = request.files['file']
+        if file:
+            
+            file_uuid = str(uuid.uuid4())
 
-    db.clips.insert_one(ret)
+            filename = file_uuid + "." + file.filename.split(".")[1]
+            filepath_of_wav = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(filepath_of_wav)  
+              
+            generate_wav(filepath_of_wav)
 
+            filepath_of_image = filepath_of_wav[:-4] + ".png"
+            print("filepath of wav", filepath_of_image)
+
+            
+            destination_wav_name = file_uuid + "." + file.filename.split(".")[1]
+            destination_image_name = file_uuid + ".png"
+            upload_blob("goodpodswaveforms", filepath_of_wav, filepath_of_image, destination_wav_name, destination_image_name)
+
+    # ret = {
+    #         "clip_id": clip_id, 
+    #         "mongo_id": mongo_id,
+    #         "waveform": waveform
+    #         }
+
+    # db.clips.insert_one(ret)
+    return {}, 200
 
 @app.route("/createPost", methods=["POST"])
 @jwt_required
