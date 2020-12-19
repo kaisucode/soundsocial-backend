@@ -83,13 +83,11 @@ def login():
 # 1) downloaded the uploaded wav file
 # 2) creates the wav image
 # 3) saves both the wav file and image to the users library
-@app.route("/saveToLibrary", methods=['POST'])
+@app.route("/clip", methods=['POST'])
 def saveToLibrary(): 
-    mongo_id = request.json["mongo_id"]
-    title = request.json["title"]
-    url = request.json["url"]
-    
-    print(request.files)
+    mongo_id = request.form.get("mongo_id")
+    title = request.form.get("title")
+    url = request.form.get("url")
     if 'file' in request.files:
         file = request.files['file']
         if file:
@@ -105,18 +103,25 @@ def saveToLibrary():
             filepath_of_image = filepath_of_wav[:-4] + ".png"
             print("filepath of wav", filepath_of_image)
 
-            
             destination_wav_name = file_uuid + "." + file.filename.split(".")[1]
             destination_image_name = file_uuid + ".png"
             upload_blob("goodpodswaveforms", filepath_of_wav, filepath_of_image, destination_wav_name, destination_image_name)
 
-    # ret = {
-    #         "clip_id": clip_id, 
-    #         "mongo_id": mongo_id,
-    #         "waveform": waveform
-    #         }
+            # add the newly uploaded clip to mongodb
+            # add a reference to the post in the user object
+            clip = {
+                "_id": file_uuid,
+                "title": title,
+                "source_url": url,
+                "gcs_wavefile": destination_wav_name,
+                "gcs_wavefile_image": destination_image_name
+            }
+            
+            inserted_clip_id = mongo.db.clips.insert_one(clip).inserted_id
+            mongo.db.users.find_one_and_update({"_id": ObjectId(mongo_id)}, { "$push": { "clips": inserted_clip_id} })
 
-    # db.clips.insert_one(ret)
+
+
     return {}, 200
 
 @app.route("/createPost", methods=["POST"])
@@ -145,7 +150,14 @@ def createPost():
     postId = db.posts.insert_one(ret).inserted_id
     return jsonify({"status": "success", 'post_id': postId }), 200
 
-
+@app.route("/verify", methods=['POST'])
+@jwt_required
+def verify():
+    current_user = get_jwt_identity()
+    if current_user:
+        return jsonify({"status": "valid"}), 200
+    else:
+        return jsonify({"status": "invalid"}), 401 
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
