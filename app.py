@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, redirect, session, url_for
-from flask_pymongo import PyMongo
+from flask_pymongo import PyMongo, ObjectId
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, create_refresh_token, get_jwt_identity, jwt_refresh_token_required
 from flask_cors import CORS, cross_origin
 import json
@@ -38,10 +38,14 @@ def signup():
         return jsonify({ "status": "error", "messsage": "username taken" }), 409
 
     pw_hash = bcrypt.generate_password_hash(password)
-    mongo_id = db.users.insert_one({ "username": username, "password_hash": pw_hash }).inserted_id
+    mongo_id = db.users.insert_one({ "username": username, "password": pw_hash }).inserted_id
+
+    print(mongo_id)
 
     access_token = create_access_token(identity=username, expires_delta=False)
-    return jsonify({"status": "success", 'access_token': access_token, 'mongo_id': ObjectId(mongo_id) }), 200
+
+    return_json = {"status": "success", 'access_token': access_token, 'mongo_id': json.dumps(mongo_id, default=str) }
+    return return_json, 200
 
 @app.route("/login", methods=["POST"])
 def login(): 
@@ -54,7 +58,8 @@ def login():
     if bcrypt.check_password_hash(pw_hash, password):
 
         access_token = create_access_token(identity=username, expires_delta=False)
-        return jsonify({"status": "success", 'access_token': access_token, 'mongo_id': ObjectId(mongo_user["_id"]) }), 200
+        return_json = {"status": "success", 'access_token': access_token, 'mongo_id': json.dumps(mongo_user["_id"], default=str)}
+        return return_json, 200
     else: 
         return jsonify({"status": "error", "message": "incorrect username or password"}), 401
 
