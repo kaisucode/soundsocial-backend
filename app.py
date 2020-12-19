@@ -41,7 +41,7 @@ def signup():
     mongo_id = db.users.insert_one({ "username": username, "password_hash": pw_hash }).inserted_id
 
     access_token = create_access_token(identity=username, expires_delta=False)
-    return jsonify({"status": "success", 'access_token': access_token, 'mongo_id': mongo_id }), 200
+    return jsonify({"status": "success", 'access_token': access_token, 'mongo_id': ObjectId(mongo_id) }), 200
 
 @app.route("/login", methods=["POST"])
 def login(): 
@@ -54,7 +54,7 @@ def login():
     if bcrypt.check_password_hash(pw_hash, password):
 
         access_token = create_access_token(identity=username, expires_delta=False)
-        return jsonify({"status": "success", 'access_token': access_token, 'mongo_id': mongo_user["_id"] }), 200
+        return jsonify({"status": "success", 'access_token': access_token, 'mongo_id': ObjectId(mongo_user["_id"]) }), 200
     else: 
         return jsonify({"status": "error", "message": "incorrect username or password"}), 401
 
