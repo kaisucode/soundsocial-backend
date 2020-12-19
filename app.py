@@ -31,7 +31,11 @@ app.config['SECRET_KEY'] = os.environ.get("GOODPODS_SECRET_KEY")
 jwt = JWTManager(app)
 
 # CORS
-CORS(app, resources={r"/*": {"origins": "*", "supports_credentials": True}})
+
+origin = "http://localhost:3000"
+
+app.config['CORS_HEADERS'] = 'Content-Type'
+CORS(app, resources={r"/*": {"origins": origin, "supports_credentials": True}})
 
 # bcrypt
 bcrypt = Bcrypt(app)
@@ -41,6 +45,7 @@ connectionString = "mongodb+srv://bruno:" + str(os.environ.get("GOODPODS_MONGO_P
 app.config["MONGO_URI"] = connectionString
 mongo = PyMongo(app)
 db = mongo.db
+
 
 @app.route("/signup", methods=["POST"])
 def signup(): 
@@ -78,11 +83,6 @@ def login():
     else: 
         return jsonify({"status": "error", "message": "incorrect username or password"}), 401
 
-
-###
-# 1) downloaded the uploaded wav file
-# 2) creates the wav image
-# 3) saves both the wav file and image to the users library
 @app.route("/clip", methods=['POST'])
 def saveToLibrary(): 
     mongo_id = request.form.get("mongo_id")
@@ -119,10 +119,16 @@ def saveToLibrary():
             
             inserted_clip_id = mongo.db.clips.insert_one(clip).inserted_id
             mongo.db.users.find_one_and_update({"_id": ObjectId(mongo_id)}, { "$push": { "clips": inserted_clip_id} })
-
-
-
     return {}, 200
+
+@app.route("/getClips", methods=['POST'])
+def get_clip_names():
+    user = mongo.db.users.find_one({"_id": ObjectId(request.json["mongo_id"])})
+    clip_names = []
+    for clip in user["clips"]:
+        clip_object = mongo.db.clips.find_one({"_id": clip}) 
+        clip_names.append(clip_object["title"])
+    return jsonify({"status": "success", "clip_names": clip_names})
 
 @app.route("/createPost", methods=["POST"])
 @jwt_required
