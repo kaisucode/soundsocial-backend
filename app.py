@@ -156,6 +156,7 @@ def getAllClips():
         clips_data.append({
             "title": clip_object["title"],
             "source_url": clip_object["source_url"],
+            "transcript": clip_object["transcript"], 
             "gcs_wavefile": clip_object["gcs_wavefile"],
             "gcs_wavefile_image": clip_object["gcs_wavefile_image"]
             })
