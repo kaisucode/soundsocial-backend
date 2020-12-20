@@ -139,7 +139,7 @@ def get_clip_names():
     for clip in user["clips"]:
         clip_object = mongo.db.clips.find_one({"_id": clip}) 
         clip_names.append(clip_object["title"])
-    return jsonify({"status": "success", "clip_names": clip_names})
+    return jsonify({"status": "success", "clip_names": clip_names, "clip_ids": user["clips"]})
 
 @app.route("/getAllClips", methods=['POST'])
 @cross_origin()
@@ -160,7 +160,7 @@ def getAllClips():
 @app.route("/feed/<num>", methods=['GET'])
 @cross_origin()
 def feed(num):
-    posts_cursor = mongo.db.posts.find().sort([('timestamp', -1)]).limit(10)
+    posts_cursor = mongo.db.posts.find().sort([('timestamp', -1)]).limit(int(num))
     posts = [post for post in posts_cursor]
     return jsonify({"status": "success", "posts": posts})
 
@@ -170,8 +170,7 @@ def createPost():
     mongo_id = request.json["mongo_id"]
     title = request.json["title"]
     caption = request.json["caption"]
-    # audioFile = request.json["audioFile"]
-    # clip_id = request.json["clip_id"]
+    clip_id = request.json["clip_id"]
 
     mongo_user = mongo.db.users.find_one({"_id": ObjectId(mongo_id)})
     username = mongo_user["username"]
@@ -189,7 +188,8 @@ def createPost():
         "username": username, 
         "title": title, 
         "caption": caption, 
-        }
+        "clip_id": clip_id
+    }
     
     db.posts.insert_one(ret)
 
