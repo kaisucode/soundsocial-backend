@@ -102,18 +102,21 @@ def saveToLibrary():
             generate_wav(filepath_of_wav)
 
             filepath_of_image = filepath_of_wav[:-4] + ".png"
-            print("filepath of wav", filepath_of_image)
+            # print("filepath of wav", filepath_of_wav)
 
             destination_wav_name = file_uuid + "." + file.filename.split(".")[1]
             destination_image_name = file_uuid + ".png"
             upload_blob("goodpodswaveforms", filepath_of_wav, filepath_of_image, destination_wav_name, destination_image_name)
 
+            r = sr.Recognizer()
+            transcript = ""
+            with sr.WavFile(filepath_of_wav) as source:              # use filepath_of_wav as the audio source
+                audio = r.record(source)                        # extract audio data from the file
             try:
-                r = sr.Recognizer()
-                audio_file = sr.AudioFile(filepath_of_wav)
-                transcript = r.recognize_google(audio_file)
-            except Exception as e:
-                transcript = ""
+                transcript = r.recognize_google(audio)
+                print("Transcription: " + transcript)   # recognize speech using Google Speech Recognition
+            except LookupError:                                 # speech is unintelligible
+                print("Could not understand audio")
 
             # add the newly uploaded clip to mongodb
             # add a reference to the post in the user object
