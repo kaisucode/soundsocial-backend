@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, redirect, session, url_for
+from flask import Flask, request, jsonify, redirect, session, url_for, send_file
 from flask_pymongo import PyMongo, ObjectId
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, create_refresh_token, get_jwt_identity, jwt_refresh_token_required
 from flask_cors import CORS, cross_origin
@@ -12,6 +12,7 @@ import time
 from gsutils import download_blob, generate_wav, upload_blob
 import uuid
 import speech_recognition as sr
+import tempfile
 
 UPLOAD_FOLDER = './WavefileUploads'
 ALLOWED_EXTENSIONS = {'mp4'}
@@ -204,6 +205,18 @@ def createPost():
     db.posts.insert_one(ret)
 
     return jsonify({"status": "success", 'post_id': post_id}), 200
+
+@app.route('/image/<filename>', methods=['GET'])
+def image(filename):
+    with tempfile.NamedTemporaryFile() as temp:
+        download_blob("goodpodswaveforms", filename, temp.name)
+        return send_file(temp.name, attachment_filename=filename)
+
+@app.route('/audio/<filename>', methods=['GET'])
+def audio(filename):
+    with tempfile.NamedTemporaryFile() as temp:
+        download_blob("goodpodswaveforms", filename, temp.name)
+        return send_file(temp.name, attachment_filename=filename)
 
 @app.route("/verify", methods=['POST'])
 @jwt_required
