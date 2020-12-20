@@ -164,6 +164,13 @@ def feed(num):
     posts = [post for post in posts_cursor]
     return jsonify({"status": "success", "posts": posts})
 
+@app.route("/clip/<clip_id>", methods=['GET'])
+@cross_origin()
+def get_clip(clip_id):
+    clip = mongo.db.clips.find_one({"_id": clip_id})
+    return jsonify({"status": "success", "clip": clip})
+
+
 @app.route("/createPost", methods=["POST"])
 @jwt_required
 def createPost(): 
