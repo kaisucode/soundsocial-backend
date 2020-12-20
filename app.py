@@ -8,7 +8,7 @@ from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
 from google.cloud import storage
 from werkzeug.utils import secure_filename
-
+import time
 from gsutils import download_blob, generate_wav, upload_blob
 import uuid
 
@@ -132,31 +132,43 @@ def get_clip_names():
         clip_names.append(clip_object["title"])
     return jsonify({"status": "success", "clip_names": clip_names})
 
+@app.route("/feed/<num>", methods=['GET'])
+@cross_origin()
+def feed(num):
+    posts_cursor = mongo.db.posts.find().sort([('timestamp', -1)]).limit(10)
+    posts = [post for post in posts_cursor]
+    return jsonify({"status": "success", "posts": posts})
+
 @app.route("/createPost", methods=["POST"])
 @jwt_required
 def createPost(): 
     mongo_id = request.json["mongo_id"]
     title = request.json["title"]
     caption = request.json["caption"]
-    audioFile = request.json["audioFile"]
-    clip_id = request.json["clip_id"]
+    # audioFile = request.json["audioFile"]
+    # clip_id = request.json["clip_id"]
 
     mongo_user = mongo.db.users.find_one({"_id": ObjectId(mongo_id)})
     username = mongo_user["username"]
 
-    mongo_clip = mongo.db.clips.find_one({"clip_id": clip_id})
-    transcript = mongo_clip["transcript"]
-    waveform = mongo_clip["waveform"]
+    # mongo_clip = mongo.db.clips.find_one({"clip_id": clip_id})
+    # transcript = mongo_clip["transcript"]
+    # waveform = mongo_clip["waveform"]
 
-    ret = {
-            "mongo_id": mongo_id, 
-            "username": username, 
-            "title": title, 
-            "caption": caption, 
-            "clip_id": clip_id
-            }
-    postId = db.posts.insert_one(ret).inserted_id
-    return jsonify({"status": "success", 'post_id': postId }), 200
+    post_id = str(uuid.uuid1())
+
+    ret = { 
+        "_id": post_id,
+        "timestamp": time.time(),
+        "mongo_id": mongo_id, 
+        "username": username, 
+        "title": title, 
+        "caption": caption, 
+        }
+    
+    db.posts.insert_one(ret)
+
+    return jsonify({"status": "success", 'post_id': post_id}), 200
 
 @app.route("/verify", methods=['POST'])
 @jwt_required
