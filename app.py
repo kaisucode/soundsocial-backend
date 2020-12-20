@@ -228,6 +228,17 @@ def verify():
     else:
         return jsonify({"status": "invalid"}), 401 
 
+@app.route("/test", methods=['POST'])
+def test():
+    if 'file' in request.files:
+        file = request.files['file']
+        print("file in the request", file)
+        if file:    
+            filename = "audio_from_extension.wav"
+            filepath_of_wav = os.path.join(UPLOAD_FOLDER, filename)
+            print("filepath we're saving to", filepath_of_wav)
+            file.save(filepath_of_wav)  
+    return {"status": "done"}
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
 
