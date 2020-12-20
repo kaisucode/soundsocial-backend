@@ -132,6 +132,22 @@ def get_clip_names():
         clip_names.append(clip_object["title"])
     return jsonify({"status": "success", "clip_names": clip_names})
 
+@app.route("/getAllClips", methods=['POST'])
+@cross_origin()
+def getAllClips():
+    mongo_id = request.json["mongo_id"]
+    user = mongo.db.users.find_one({"_id": ObjectId(mongo_id)})
+    clips_data = []
+    for clip in user["clips"]:
+        clip_object = mongo.db.clips.find_one({"_id": clip}) 
+        clips_data.append({
+            "title": clip_object["title"],
+            "source_url": clip_object["source_url"],
+            "gcs_wavefile": clip_object["gcs_wavefile"],
+            "gcs_wavefile_image": clip_object["gcs_wavefile_image"]
+            })
+    return jsonify({"status": "success", "clips_data": clips_data})
+
 @app.route("/createPost", methods=["POST"])
 @jwt_required
 def createPost(): 
