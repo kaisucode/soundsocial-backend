@@ -11,6 +11,7 @@ from werkzeug.utils import secure_filename
 import time
 from gsutils import download_blob, generate_wav, upload_blob
 import uuid
+import speech_recognition as sr
 
 UPLOAD_FOLDER = './WavefileUploads'
 ALLOWED_EXTENSIONS = {'mp4'}
@@ -107,12 +108,20 @@ def saveToLibrary():
             destination_image_name = file_uuid + ".png"
             upload_blob("goodpodswaveforms", filepath_of_wav, filepath_of_image, destination_wav_name, destination_image_name)
 
+            try:
+                r = sr.Recognizer()
+                audio_file = sr.AudioFile(filepath_of_wav)
+                transcript = r.recognize_google(audio_file)
+            except Exception as e:
+                transcript = ""
+
             # add the newly uploaded clip to mongodb
             # add a reference to the post in the user object
             clip = {
                 "_id": file_uuid,
                 "title": title,
                 "source_url": url,
+                "transcript": transcript,
                 "gcs_wavefile": destination_wav_name,
                 "gcs_wavefile_image": destination_image_name
             }

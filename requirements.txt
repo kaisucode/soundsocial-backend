@@ -35,5 +35,6 @@ pytz==2020.4
 requests==2.25.1
 rsa==4.6
 six==1.15.0
+SpeechRecognition==3.8.1
 urllib3==1.26.2
 Werkzeug==1.0.1
